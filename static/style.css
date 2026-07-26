@@ -1,0 +1,48 @@
+/* Custom Scrollbars for a Premium UI Feel */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #020617; /* Matches slate-950 */
+}
+
+::-webkit-scrollbar-thumb {
+    background: #1e293b; /* Matches slate-800 */
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #ef4444; /* Accents to red-500 on hover */
+}
+
+/* Custom Modal Backdrop Animation Utility */
+.modal-backdrop-fade {
+    transition: opacity 0.3s ease-in-out;
+}
+
+/* Tailwind Line Clamp Fallbacks */
+.line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.line-clamp-6 {
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    line-clamp: 6;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}

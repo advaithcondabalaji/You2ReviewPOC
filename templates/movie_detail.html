@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ movie.title }} | MovieSphere{% endblock %}
+
+{% block content %}
+<div class="space-y-8 pb-12">
+    <!-- Back Button -->
+    <div>
+        <a href="/" class="inline-flex items-center text-sm font-semibold text-slate-400 hover:text-white transition-colors group">
+            <i class="fa-solid fa-arrow-left mr-2 transform group-hover:-translate-x-1 transition-transform"></i> 
+            Back to Catalog
+        </a>
+    </div>
+
+    <!-- Main Content Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Left Side: Poster (4 Columns) -->
+        <div class="lg:col-span-4">
+            <div class="sticky top-24 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900 aspect-[2/3]">
+                <img 
+                    src="{{ movie.poster_url or 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1000' }}" 
+                    alt="{{ movie.title }}" 
+                    class="w-full h-full object-cover"
+                >
+            </div>
+        </div>
+
+        <!-- Right Side: Movie Details, AI Box, & Reviews (8 Columns) -->
+        <div class="lg:col-span-8 flex flex-col space-y-6">
+            
+            <!-- Movie Header Info -->
+            <div>
+                <div class="flex flex-wrap items-center gap-3 mb-3">
+                    {% if movie.rating %}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        <i class="fa-solid fa-star mr-1"></i> {{ movie.rating }} / 10
+                    </span>
+                    {% endif %}
+                    <span class="text-sm font-semibold text-slate-400">{{ movie.release_year }}</span>
+                    <span class="text-slate-700">•</span>
+                    <span class="text-sm font-semibold text-slate-400">{{ movie.genre }}</span>
+                </div>
+                <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">{{ movie.title }}</h1>
+                <p class="text-md text-slate-500 mt-2">
+                    Directed by <span class="text-slate-300 font-medium">{{ movie.director or 'Unknown Director' }}</span>
+                </p>
+            </div>
+
+            <!-- Description/Synopsis Block -->
+            <div class="bg-slate-900 border border-slate-800/80 rounded-xl p-6">
+                <h2 class="text-lg font-bold text-white mb-3">Synopsis</h2>
+                <p class="text-slate-300 leading-relaxed text-md">
+                    {{ movie.synopsis or 'No synopsis is available for this film yet.' }}
+                </p>
+            </div>
+
+            <!-- AI Sentiment Analysis Container (The External AI Feature) -->
+            <div class="bg-gradient-to-br from-indigo-950/40 via-purple-950/20 to-slate-900 border border-indigo-500/30 rounded-xl p-6 shadow-lg relative overflow-hidden">
+                <!-- Blurred background accent -->
+                <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
+                
+                <div class="flex items-center space-x-3 mb-4">
+                    <div class="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20 text-indigo-400">
+                        <i class="fa-solid fa-wand-magic-sparkles text-lg animate-pulse"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-white">AI Audience Sentiment</h2>
+                        <p class="text-xs text-indigo-300/80">Real-time analytical summary from external databases</p>
+                    </div>
+                </div>
+
+                <!-- AI Output Box -->
+                <div class="prose prose-invert max-w-none text-slate-300">
+                    <p id="ai-verdict-text" class="text-slate-400 text-sm leading-relaxed">
+                        <!-- If we pass the analysis from the backend route -->
+                        {% if ai_analysis %}
+                            {{ ai_analysis }}
+                        {% else %}
+                            <i class="fa-solid fa-spinner animate-spin mr-2 text-indigo-400"></i> Querying external AI engine for critical reviews consensus...
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Review Section (Gated by Login) -->
+            <div class="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-xl mt-4">
+                <h2 class="text-xl font-bold text-white mb-6">Leave a Review</h2>
+
+                {% if session.get('user_id') %}
+                    <!-- User IS logged in: Show the Review Form -->
+                    <form action="/movie/{{ movie.id }}/review" method="POST" class="space-y-4">
+                        <div>
+                            <label for="rating" class="block text-sm font-semibold text-slate-300 mb-2">Rating (1-10)</label>
+                            <input type="number" name="rating" id="rating" min="1" max="10" required
+                                class="w-full md:w-32 bg-slate-900 border border-slate-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+                        </div>
+                        
+                        <div>
+                            <label for="comment" class="block text-sm font-semibold text-slate-300 mb-2">Your Review</label>
+                            <textarea name="comment" id="comment" rows="4" required placeholder="What did you think of the movie?"
+                                class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"></textarea>
+                        </div>
+                        
+                        <button type="submit" class="bg-sky-500 hover:bg-sky-400 text-white font-bold py-2.5 px-6 rounded-lg shadow-lg shadow-sky-500/20 transition-all">
+                            Submit Review
+                        </button>
+                    </form>
+
+                {% else %}
+                    <!-- User is NOT logged in: Show Auth Prompt -->
+                    <div class="bg-slate-900/50 rounded-xl p-8 text-center border border-slate-700/50">
+                        <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fa-solid fa-lock text-2xl text-slate-400"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">Sign in to rate and review</h3>
+                        <p class="text-slate-400 mb-6 text-sm max-w-md mx-auto">You must have an account to share your thoughts and rate this movie. Join the community!</p>
+                        <div class="flex items-center justify-center gap-4">
+                            <a href="/login" class="px-6 py-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold transition-colors">
+                                Log In
+                            </a>
+                            <a href="/signup" class="px-6 py-2.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-white text-sm font-bold shadow-lg shadow-sky-500/20 transition-all">
+                                Sign Up
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Public Community Reviews Feed -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl mt-6">
+                <h2 class="text-xl font-bold text-white mb-6">Community Reviews ({{ reviews|length }})</h2>
+
+                {% if reviews %}
+                    <div class="space-y-4">
+                        {% for review in reviews %}
+                            <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="font-bold text-white text-sm">@{{ review.username }}</span>
+                                        {% if review.is_admin %}
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 uppercase tracking-wider">
+                                                Admin
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex items-center space-x-3">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                            <i class="fa-solid fa-star mr-1"></i> {{ review.rating }} / 10
+                                        </span>
+                                        
+                                        <!-- Check if current user is admin to display delete capability -->
+                                        {% if session.get('username') %}
+                                            {% set current_user_record = get_user_by_username(session.get('username')) %}
+                                            {% if current_user_record and current_user_record.is_admin %}
+                                                <form action="/review/{{ review.id }}/delete" method="POST" onsubmit="return confirm('Are you sure you want to delete this review?');" class="inline">
+                                                    <button type="submit" class="text-slate-500 hover:text-red-400 transition-colors p-1" title="Delete Review">
+                                                        <i class="fa-solid fa-trash-can text-xs"></i>
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <p class="text-slate-300 text-sm leading-relaxed">{{ review.comment }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-slate-500 text-sm italic">No reviews yet. Be the first to share your thoughts!</p>
+                {% endif %}
+            </div>
+
+            <!-- Watermark Footer Banner -->
+            <div class="pt-4 pb-2 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+                <div class="flex items-center space-x-1.5">
+                    <i class="fa-solid fa-code text-sky-500"></i>
+                    <span>INTERNSHIP PROJECT</span>
+                </div>
+                <div class="font-medium text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1 rounded-full shadow-inner">
+                    Made by <span class="text-sky-400 font-semibold">Advaith Sankar Conda Balaji</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

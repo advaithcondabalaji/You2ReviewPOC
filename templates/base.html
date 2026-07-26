@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}You2Review{% endblock %}</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom styling to hide scrollbar but keep functionality -->
+    <style>
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-[#090b14] text-slate-200 min-h-screen flex flex-col">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-[#090b14] border-b border-slate-800 sticky top-0 z-50 px-4 lg:px-8 py-3 flex items-center justify-between">
+        <!-- Left: Brand Logo -->
+        <div class="flex items-center space-x-6">
+            <a href="/" class="text-xl font-black text-sky-400 tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-film"></i> You2Review
+            </a>
+            <a href="/" class="text-slate-300 hover:text-white text-sm font-semibold transition-colors flex items-center gap-1.5">
+                <i class="fa-solid fa-house"></i> Catalog
+            </a>
+        </div>
+
+        <!-- Center: Search Bar -->
+        <div class="flex items-center flex-1 max-w-md mx-8">
+            <form action="/" method="GET" class="w-full relative">
+                <input type="text" name="search" value="{{ request.args.get('search', '') }}" placeholder="Search movies..." class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-full pl-10 pr-4 py-2 focus:outline-none focus:border-sky-500 transition-colors shadow-inner">
+                <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+            </form>
+        </div>
+
+        <!-- Right: Auth Buttons -->
+        <div class="flex items-center space-x-4">
+            {% if session.get('user_id') %}
+                <span class="text-slate-300 text-sm font-medium hidden sm:inline">Hi, <span class="text-sky-400 font-bold">{{ session.get('username') }}</span></span>
+                <a href="/logout" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-full text-sm font-semibold transition-colors">Logout</a>
+            {% else %}
+                <a href="/login" class="text-slate-300 hover:text-white text-sm font-semibold px-3 py-2 transition-colors">Login</a>
+                <a href="/signup" class="bg-sky-500 hover:bg-sky-400 text-white px-5 py-2 rounded-full text-sm font-bold shadow-lg shadow-sky-500/20 transition-all whitespace-nowrap">Sign Up</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow container mx-auto px-4 py-8">
+        <!-- Flash Messages (for login errors/success) -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-6">
+                    {% for category, message in messages %}
+                        <div class="p-4 rounded-lg mb-2 {{ 'bg-red-500/20 border border-red-500 text-red-400' if category == 'error' else 'bg-green-500/20 border border-green-500 text-green-400' }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- This is where index.html gets injected -->
+        {% block content %}{% endblock %}
+    </main>
+
+</body>
+</html>

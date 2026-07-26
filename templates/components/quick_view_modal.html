@@ -1,0 +1,51 @@
+<!-- Quick View Modal Backdrop -->
+<div id="quick-view-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <!-- Modal Card -->
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-all duration-350">
+        
+        <!-- Modal Header -->
+        <div class="px-6 py-4 border-b border-slate-850 flex items-center justify-between">
+            <h3 id="qv-title" class="text-xl font-black text-white truncate">Movie Title</h3>
+            <button id="close-qv-btn" class="text-slate-400 hover:text-white transition-colors">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Modal Body (Split Layout) -->
+        <div class="p-6 grid grid-cols-1 md:grid-cols-12 gap-6">
+            <!-- Left: Poster Image -->
+            <div class="md:col-span-5 aspect-[2/3] bg-slate-950 rounded-xl overflow-hidden border border-slate-800">
+                <img id="qv-image" src="" alt="Movie Poster" class="w-full h-full object-cover">
+            </div>
+
+            <!-- Right: Quick Metadata and Description -->
+            <div class="md:col-span-7 flex flex-col justify-between space-y-4">
+                <div class="space-y-3">
+                    <div class="flex items-center space-x-3">
+                        <span id="qv-rating" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            <i class="fa-solid fa-star mr-1"></i> <span id="qv-rating-val">--</span> / 10
+                        </span>
+                        <span id="qv-year" class="text-xs text-slate-400 font-semibold">----</span>
+                        <span class="text-slate-700">•</span>
+                        <span id="qv-genre" class="text-xs text-slate-400 font-semibold truncate max-w-[150px]">Genre</span>
+                    </div>
+
+                    <p id="qv-director" class="text-xs text-slate-500 font-medium">Directed by <span class="text-slate-300 font-semibold">--</span></p>
+
+                    <p id="qv-description" class="text-sm text-slate-400 leading-relaxed line-clamp-6">
+                        Loading synopsis...
+                    </p>
+                </div>
+
+                <div class="pt-4 border-t border-slate-850 flex items-center justify-end space-x-3">
+                    <button id="close-qv-secondary-btn" class="px-4 py-2 bg-slate-850 hover:bg-slate-800 text-slate-300 text-xs font-semibold rounded-lg border border-slate-800 transition-colors">
+                        Close
+                    </button>
+                    <a id="qv-full-details-btn" href="#" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                        Full Movie Details
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard | MovieSphere{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Top Stats Bar -->
+    <div>
+        <h1 class="text-3xl font-black text-white tracking-tight">System Dashboard</h1>
+        <p class="text-sm text-slate-400 mt-1">Database status, quick statistics, and system controls.</p>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+        <!-- Stat Card 1 -->
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Movies</p>
+                <h3 class="text-2xl font-bold text-white mt-1">{{ total_movies|default(70) }}</h3>
+            </div>
+            <div class="p-3 bg-red-500/10 text-red-500 rounded-lg border border-red-500/20">
+                <i class="fa-solid fa-film text-lg"></i>
+            </div>
+        </div>
+
+        <!-- Stat Card 2 -->
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Genres Tracked</p>
+                <h3 class="text-2xl font-bold text-white mt-1">14</h3>
+            </div>
+            <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-lg border border-indigo-500/20">
+                <i class="fa-solid fa-tags text-lg"></i>
+            </div>
+        </div>
+
+        <!-- Stat Card 3 -->
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Database Status</p>
+                <h3 class="text-2xl font-bold text-emerald-400 mt-1">Connected</h3>
+            </div>
+            <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20">
+                <i class="fa-solid fa-database text-lg"></i>
+            </div>
+        </div>
+
+        <!-- Stat Card 4 -->
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">AI API Status</p>
+                <h3 class="text-2xl font-bold text-purple-400 mt-1">Online</h3>
+            </div>
+            <div class="p-3 bg-purple-500/10 text-purple-400 rounded-lg border border-purple-500/20">
+                <i class="fa-solid fa-microchip text-lg"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Split Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left 2 Columns: Movie Management / Quick Table -->
+        <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+                <h2 class="text-lg font-bold text-white">Database Records Preview</h2>
+                <span class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded border border-slate-700">Displaying Page 1</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-950/50 text-slate-400 text-xs font-semibold uppercase border-b border-slate-850">
+                            <th class="py-3.5 px-5">Title</th>
+                            <th class="py-3.5 px-5">Director</th>
+                            <th class="py-3.5 px-5">Year</th>
+                            <th class="py-3.5 px-5">Rating</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-850 text-sm">
+                        {% for movie in movies|slice(0, 5) %}
+                        <tr class="hover:bg-slate-850/30 transition-colors">
+                            <td class="py-4 px-5 font-medium text-white">{{ movie.title }}</td>
+                            <td class="text-slate-400 py-4 px-5">{{ movie.director }}</td>
+                            <td class="text-slate-400 py-4 px-5">{{ movie.release_year }}</td>
+                            <td class="py-4 px-5">
+                                <span class="text-amber-400 font-semibold"><i class="fa-solid fa-star mr-1"></i>{{ movie.rating }}</span>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="py-8 text-center text-slate-500">
+                                No movies loaded yet. Ensure your seed data is populated!
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Right 1 Column: AI Integration & Utility Actions -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col justify-between">
+            <div>
+                <h2 class="text-lg font-bold text-white mb-2">System Integrations</h2>
+                <p class="text-xs text-slate-400 leading-relaxed mb-6">Manage endpoints, monitor AI prompt calls, or run utility tasks from this control module.</p>
+                
+                <div class="space-y-4">
+                    <button class="w-full py-2.5 px-4 bg-slate-950 hover:bg-slate-850 text-slate-300 text-sm font-medium border border-slate-800 rounded-lg flex items-center justify-between transition-colors">
+                        <span><i class="fa-solid fa-rotate mr-2 text-indigo-400"></i> Refresh Poster Cache</span>
+                        <i class="fa-solid fa-chevron-right text-[10px] text-slate-500"></i>
+                    </button>
+                    
+                    <button class="w-full py-2.5 px-4 bg-slate-950 hover:bg-slate-850 text-slate-300 text-sm font-medium border border-slate-800 rounded-lg flex items-center justify-between transition-colors">
+                        <span><i class="fa-solid fa-bolt mr-2 text-yellow-400"></i> Run AI Validation Test</span>
+                        <i class="fa-solid fa-chevron-right text-[10px] text-slate-500"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-6 border-t border-slate-800">
+                <a href="/" class="block w-full text-center py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors">
+                    Back to Movie Catalog
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
