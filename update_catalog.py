@@ -4,7 +4,7 @@ import pymysql
 from dotenv import load_dotenv
 import time
 
-# Load environment variables from your .env file
+
 load_dotenv()
 
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")

@@ -1,12 +1,11 @@
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from a .env file if it exists
 load_dotenv()
 
 class Config:
     """Base configuration class."""
-    # Secret key for signing session cookies and shielding against CSRF
+
     SECRET_KEY = os.environ.get('SECRET_KEY', 'develop-secret-key-keep-it-safe')
     
     # Database Configuration
@@ -15,7 +14,7 @@ class Config:
     DB_PASSWORD = os.environ.get('DB_PASSWORD', '')
     DB_NAME = os.environ.get('DB_NAME', 'movie_db')
     
-    # SQLAlchemy Configuration (if you decide to use Flask-SQLAlchemy later)
+   
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
 

@@ -10,7 +10,20 @@
             <p class="text-slate-400 text-sm">Join You2Review to rate and review movies.</p>
         </div>
 
-        <form action="/signup" method="POST" class="space-y-6">
+        <!-- Flash Messages Display -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-6 space-y-2">
+                    {% for category, message in messages %}
+                        <div class="p-3 rounded-lg text-sm font-medium border {% if category == 'success' %}bg-emerald-500/10 border-emerald-500/30 text-emerald-400{% else %}bg-rose-500/10 border-rose-500/30 text-rose-400{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form action="/signup" method="POST" class="space-y-5">
             <div>
                 <label for="username" class="block text-sm font-semibold text-slate-300 mb-2">Username</label>
                 <div class="relative">
@@ -20,6 +33,18 @@
                     <input type="text" id="username" name="username" required autocomplete="off"
                         class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
                         placeholder="Choose a username">
+                </div>
+            </div>
+
+            <div>
+                <label for="email" class="block text-sm font-semibold text-slate-300 mb-2">Email Address</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-envelope text-slate-500"></i>
+                    </div>
+                    <input type="email" id="email" name="email" required autocomplete="off"
+                        class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
+                        placeholder="your@email.com">
                 </div>
             </div>
 

@@ -35,7 +35,7 @@ def get_all_movies(genre=None, search=None, page=1, per_page=8, **kwargs):
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
-            # 1. First, build the query for fetching the specific page of movies
+            
             query = "SELECT * FROM movies WHERE 1=1"
             params = []
 
@@ -47,7 +47,7 @@ def get_all_movies(genre=None, search=None, page=1, per_page=8, **kwargs):
                 query += " AND (title LIKE %s OR director LIKE %s)"
                 params.extend([f"%{search}%", f"%{search}%"])
 
-            # Calculate limit and offset based on pagination args from app.py
+            
             limit = int(per_page)
             current_page = max(1, int(page))
             offset = (current_page - 1) * limit
@@ -58,7 +58,7 @@ def get_all_movies(genre=None, search=None, page=1, per_page=8, **kwargs):
             cursor.execute(query, params)
             movies = cursor.fetchall()
 
-            # 2. Get the total count for the pagination math in app.py
+            
             count_query = "SELECT COUNT(*) as total FROM movies WHERE 1=1"
             count_params = []
 
@@ -74,7 +74,6 @@ def get_all_movies(genre=None, search=None, page=1, per_page=8, **kwargs):
             result = cursor.fetchone()
             total_count = result['total'] if result else 0
 
-            # Return BOTH items so app.py can unpack them properly
             return movies, total_count
             
     finally:
@@ -124,25 +123,48 @@ def get_unique_genres():
     finally:
         connection.close()
 
-def add_user(username, password_hash):
+def add_user(username, password_hash, email=None):
     """
-    Inserts a new user into the database.
-    Returns True if successful, False if the username already exists.
+    Dynamically inserts a new user into the database based on active table columns.
+    Returns True if successful, False if insertion fails.
     """
     conn = None
     cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+
         
-        cursor.execute(
-            "INSERT INTO users (username, password_hash) VALUES (%s, %s)", 
-            (username, password_hash)
-        )
+        cursor.execute("SHOW COLUMNS FROM users")
+        columns = [col['Field'] for col in cursor.fetchall()]
+
+        fields = ['username']
+        values = [username]
+
+      
+        if 'password_hash' in columns:
+            fields.append('password_hash')
+            values.append(password_hash)
+        elif 'password' in columns:
+            fields.append('password')
+            values.append(password_hash)
+
+        # Handle optional/required email column
+        if 'email' in columns:
+            fields.append('email')
+            values.append(email if email else f"{username}@example.com")
+
+        placeholders = ', '.join(['%s'] * len(fields))
+        col_names = ', '.join(fields)
+        query = f"INSERT INTO users ({col_names}) VALUES ({placeholders})"
+
+        cursor.execute(query, tuple(values))
         conn.commit()
+        print(f" SUCCESS: Registered user '{username}' in database!")
         return True
+
     except Exception as e:
-        print(f"Error adding user: {e}")
+        print(f"❌ Error adding user to database: {e}")
         return False
     finally:
         if cursor:
@@ -159,12 +181,10 @@ def get_user_by_username(username):
     cursor = None
     try:
         conn = get_db_connection()
-        # Uses DictCursor defined at the connection level safely
-        cursor = conn.cursor() 
+        cursor = conn.cursor()
         
         cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
         user = cursor.fetchone()
-        
         return user
     except Exception as e:
         print(f"Error fetching user: {e}")
@@ -192,11 +212,13 @@ def add_review(movie_id, user_id, rating, comment):
         print(f"Error adding review: {e}")
         return False
     finally:
-        if cursor: cursor.close()
-        if conn: conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 def get_reviews_by_movie_id(movie_id):
-    """Retrieves all reviews for a specific movie, including the username and admin status of the reviewer."""
+    """Retrieves all reviews for a specific movie, including username and admin status."""
     conn = None
     cursor = None
     try:
@@ -215,8 +237,10 @@ def get_reviews_by_movie_id(movie_id):
         print(f"Error fetching reviews: {e}")
         return []
     finally:
-        if cursor: cursor.close()
-        if conn: conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 def delete_review_by_id(review_id):
     """Deletes a review from the database by its ID."""
@@ -232,5 +256,7 @@ def delete_review_by_id(review_id):
         print(f"Error deleting review: {e}")
         return False
     finally:
-        if cursor: cursor.close()
-        if conn: conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()

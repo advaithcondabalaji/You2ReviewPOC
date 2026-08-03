@@ -2,8 +2,9 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from werkzeug.security import generate_password_hash, check_password_hash
 from better_profanity import profanity
 import os
+import inspect
 from dotenv import load_dotenv
-from config import config_by_name  # Import your new environment dictionary
+from config import config_by_name 
 
 from services.db_services import (
     get_all_movies, 
@@ -18,15 +19,13 @@ from services.db_services import (
 )
 from services.ai_services import generate_movie_sentiment
 
-# Load env variables right when the app starts to ensure API keys are caught
 load_dotenv()
 
-# Load the default list of bad words for the username filter
 profanity.load_censor_words()
 
 app = Flask(__name__)
 
-# Determine the environment from the system variables, defaulting to 'development'
+# Determine the environment from system variables, defaulting to 'development'
 env_name = os.getenv('FLASK_ENV', 'development')
 app.config.from_object(config_by_name[env_name])
 app.secret_key = os.getenv('SECRET_KEY', 'dev_secret_key') 
@@ -34,7 +33,6 @@ app.secret_key = os.getenv('SECRET_KEY', 'dev_secret_key')
 @app.route('/')
 def index():
     """Main Catalog Dashboard View."""
-    # Read query parameters from URL for search, filtering, and pagination
     search_query = request.args.get('search', '').strip()
     selected_genre = request.args.get('genre', '').strip()
     
@@ -53,19 +51,13 @@ def index():
         per_page=per_page
     )
     
-    # 2. Fetch a broader unpaginated list to populate the Carousel and Sidebar globally
+    # 2. Fetch broader list for Carousel and Sidebar
     all_movies, _ = get_all_movies(per_page=100)
     
-    # Carousel: Grab the first 3 movies from the global list
     featured_movies = all_movies[:3] if all_movies else []
-    
-    # Sidebar: Sort the global list by rating (highest first) for the "Top Movies"
     top_movies = sorted(all_movies, key=lambda x: float(x.get('rating') or 0), reverse=True)[:5]
-    
-    # 3. Genres for the filter tags
     genres = get_unique_genres()
 
-    # Calculate total pages for pagination
     total_pages = (total_count + per_page - 1) // per_page if total_count > 0 else 1
 
     return render_template(
@@ -83,12 +75,11 @@ def index():
 
 @app.route('/movie/<int:movie_id>')
 def movie_detail(movie_id):
-    """Individual Movie Detail View with AI Sentiment Summary and Community Reviews."""
+    """Individual Movie Detail View."""
     movie = get_movie_by_id(movie_id)
     if not movie:
         return redirect(url_for('index'))
 
-    # Generate the AI sentiment consensus for this specific movie
     ai_analysis = generate_movie_sentiment(
         title=movie['title'],
         director=movie.get('director'),
@@ -96,7 +87,6 @@ def movie_detail(movie_id):
         release_year=movie.get('release_year')
     )
 
-    # Fetch public reviews for this specific movie
     reviews = get_reviews_by_movie_id(movie_id)
 
     return render_template(
@@ -110,7 +100,7 @@ def movie_detail(movie_id):
 
 @app.route('/movie/<int:movie_id>/review', methods=['POST'])
 def submit_review(movie_id):
-    """Handle adding a review for a movie (requires login)."""
+    """Handle adding a review for a movie."""
     if 'user_id' not in session:
         flash("You must be logged in to leave a review.", "error")
         return redirect(url_for('login'))
@@ -130,7 +120,6 @@ def submit_review(movie_id):
         flash("Rating must be a valid number between 1 and 10.", "error")
         return redirect(url_for('movie_detail', movie_id=movie_id))
 
-    # Save the review to the database
     success = add_review(movie_id, session['user_id'], rating, comment)
     if success:
         flash("Review submitted successfully!", "success")
@@ -147,7 +136,6 @@ def delete_review(review_id):
         flash("You must be logged in.", "error")
         return redirect(url_for('login'))
     
-    # Check if the currently logged-in user has admin privileges
     user = get_user_by_username(session.get('username'))
     if not user or not user.get('is_admin'):
         flash("Unauthorized action.", "error")
@@ -167,31 +155,42 @@ def signup():
     """Handle user registration."""
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip()
         password = request.form.get('password')
         
         if not username or not password:
             flash("Username and password are required.", "error")
-            return redirect(url_for('signup'))
+            return render_template('signup.html')
             
         # 1. Inappropriate Username Filter Check
         if profanity.contains_profanity(username):
             flash("That username contains inappropriate language. Please choose another.", "error")
-            return redirect(url_for('signup'))
+            return render_template('signup.html')
             
         # 2. Length Check
         if len(username) < 3 or len(username) > 20:
             flash("Username must be between 3 and 20 characters.", "error")
-            return redirect(url_for('signup'))
+            return render_template('signup.html')
             
         hashed_password = generate_password_hash(password)
         
-        # 3. Save to database using db_services
-        if add_user(username, hashed_password):
+        # 3. Call add_user dynamically checking if email parameter is supported
+        sig = inspect.signature(add_user)
+        try:
+            if 'email' in sig.parameters:
+                user_created = add_user(username, hashed_password, email=email)
+            else:
+                user_created = add_user(username, hashed_password)
+        except Exception as e:
+            user_created = False
+            print(f"Error calling add_user: {e}")
+
+        if user_created:
             flash("Account created successfully! Please log in.", "success")
             return redirect(url_for('login'))
         else:
-            flash("Username already exists. Please pick a different one.", "error")
-            return redirect(url_for('signup'))
+            flash("Could not create account. Username or email may already exist.", "error")
+            return render_template('signup.html')
             
     return render_template('signup.html')
 
@@ -203,16 +202,19 @@ def login():
         username = request.form.get('username', '').strip()
         password = request.form.get('password')
         
-        # Fetch user from database using db_services
         user = get_user_by_username(username)
         
-        if user and check_password_hash(user['password_hash'], password):
-            # Establish session parameters
+        # Flexibly handle password column naming ('password_hash' or 'password')
+        stored_hash = user.get('password_hash') or user.get('password') if user else None
+
+        if user and stored_hash and check_password_hash(stored_hash, password):
             session['user_id'] = user['id']
             session['username'] = user['username']
+            flash("Successfully logged in!", "success")
             return redirect(url_for('index'))
         else:
             flash("Invalid username or password.", "error")
+            return render_template('login.html')
             
     return render_template('login.html')
 
@@ -221,6 +223,7 @@ def login():
 def logout():
     """Handle user logout."""
     session.clear()
+    flash("You have been logged out.", "success")
     return redirect(url_for('index'))
 
 
@@ -237,12 +240,10 @@ def dashboard():
     )
 
 
-# Handle 404 errors gracefully
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('index.html', movies=[], featured_movies=[], top_movies=[], genres=[], search_query="", selected_genre="", current_page=1, total_pages=1), 404
 
 
 if __name__ == '__main__':
-    # Start local development server
     app.run(debug=True, port=5000)
