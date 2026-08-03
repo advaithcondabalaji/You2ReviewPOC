@@ -1,15 +1,34 @@
+import os
 import pymysql
 from flask import current_app
 
 def get_db_connection():
-    """Establishes and returns a connection to the MySQL database using app config."""
-    return pymysql.connect(
-        host=current_app.config['DB_HOST'],
-        user=current_app.config['DB_USER'],
-        password=current_app.config['DB_PASSWORD'],
-        database=current_app.config['DB_NAME'],
-        cursorclass=pymysql.cursors.DictCursor  # Returns rows as dictionaries (e.g., row['title'])
-    )
+    """Establishes a connection, applying SSL only for the cloud database."""
+    # Grab from environment variables first (Render), fallback to config (Local)
+    host = os.environ.get('DB_HOST', current_app.config.get('DB_HOST', '')).strip()
+    user = os.environ.get('DB_USER', current_app.config.get('DB_USER', '')).strip()
+    password = os.environ.get('DB_PASSWORD', current_app.config.get('DB_PASSWORD', '')).strip()
+    db = os.environ.get('DB_NAME', current_app.config.get('DB_NAME', '')).strip()
+    
+    # Safely get the port, defaulting to 3306 for local
+    port_val = os.environ.get('DB_PORT') or current_app.config.get('DB_PORT', 3306)
+    port = int(str(port_val).strip())
+
+    # Base connection parameters
+    connection_params = {
+        'host': host,
+        'port': port,
+        'user': user,
+        'password': password,
+        'database': db,
+        'cursorclass': pymysql.cursors.DictCursor
+    }
+
+    # ONLY apply SSL if the host is your Aiven cloud database
+    if "aivencloud" in host:
+        connection_params['ssl'] = {"ssl": {}}
+
+    return pymysql.connect(**connection_params)
 
 def get_all_movies(genre=None, search=None, page=1, per_page=8, **kwargs):
     """Retrieves a paginated list of movies AND the total count matching the current filters."""
