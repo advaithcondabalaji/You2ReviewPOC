@@ -101,30 +101,40 @@ def movie_detail(movie_id):
 @app.route('/movie/<int:movie_id>/review', methods=['POST'])
 def submit_review(movie_id):
     """Handle adding a review for a movie."""
-    if 'user_id' not in session:
+    user_id = session.get('user_id')
+    
+    if not user_id:
         flash("You must be logged in to leave a review.", "error")
         return redirect(url_for('login'))
         
-    rating = request.form.get('rating')
-    comment = request.form.get('comment', '').strip()
+    rating_raw = request.form.get('rating')
+    comment_raw = request.form.get('comment', '').strip()
     
-    if not rating or not comment:
+    if not rating_raw or not comment_raw:
         flash("Rating and comment are required.", "error")
         return redirect(url_for('movie_detail', movie_id=movie_id))
 
     try:
-        rating = int(rating)
+        rating = int(rating_raw)
         if rating < 1 or rating > 10:
             raise ValueError()
     except ValueError:
         flash("Rating must be a valid number between 1 and 10.", "error")
         return redirect(url_for('movie_detail', movie_id=movie_id))
 
-    success = add_review(movie_id, session['user_id'], rating, comment)
+    clean_comment = profanity.censor(comment_raw)
+
+    success, err_msg = add_review(
+        movie_id=int(movie_id), 
+        user_id=int(user_id), 
+        rating=rating, 
+        comment=clean_comment
+    )
+    
     if success:
         flash("Review submitted successfully!", "success")
     else:
-        flash("Failed to submit review. Try again.", "error")
+        flash(f"Database Error: {err_msg}", "error")
         
     return redirect(url_for('movie_detail', movie_id=movie_id))
 

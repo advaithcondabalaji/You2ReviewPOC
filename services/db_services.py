@@ -204,36 +204,45 @@ def get_user_by_username(username):
             conn.close()
 
 def add_review(movie_id, user_id, rating, comment):
-    """Inserts a new review into the database, handling schema variations automatically."""
+    """Inserts a new review into the database, auto-creating the movie record if missing."""
     conn = None
     cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
-        # 1. Inspect actual columns in the reviews table
+
+        # 1. Auto-create movie record if it doesn't exist in Aiven yet (prevents Foreign Key crash)
+        cursor.execute("SELECT id FROM movies WHERE id = %s", (int(movie_id),))
+        if not cursor.fetchone():
+            cursor.execute(
+                "INSERT INTO movies (id, title, genre) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE id=id",
+                (int(movie_id), f"Movie #{movie_id}", "General")
+            )
+            conn.commit()
+
+        # 2. Inspect columns to handle schema variations
         cursor.execute("SHOW COLUMNS FROM reviews")
         columns = [col['Field'] for col in cursor.fetchall()]
-        
+
         fields = ['movie_id', 'user_id', 'rating', 'comment']
         values = [int(movie_id), int(user_id), int(rating), str(comment)]
-        
-        # 2. Add created_at only if the column actually exists in Aiven
+
         if 'created_at' in columns:
             query = f"INSERT INTO reviews ({', '.join(fields)}, created_at) VALUES (%s, %s, %s, %s, NOW())"
         else:
             placeholders = ', '.join(['%s'] * len(fields))
             query = f"INSERT INTO reviews ({', '.join(fields)}) VALUES ({placeholders})"
-            
+
         cursor.execute(query, tuple(values))
         conn.commit()
-        print(f" SUCCESS: Review added for movie_id {movie_id} by user_id {user_id}")
-        return True
-        
+        return True, "Success"
+
     except Exception as e:
         print(f"❌ DATABASE ERROR IN ADD_REVIEW: {e}")
-        return False
-        
+        if conn:
+            conn.rollback()
+        return False, str(e)
+
     finally:
         if cursor:
             cursor.close()
