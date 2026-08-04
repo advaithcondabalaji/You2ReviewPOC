@@ -1,4 +1,5 @@
 import os
+import ssl
 import pymysql
 from flask import current_app, has_app_context
 from dotenv import load_dotenv
@@ -7,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def get_db_connection():
-    """Establishes a connection, applying SSL only for the cloud database."""
+    """Establishes a connection, applying an explicit SSL context for cloud databases."""
     # Check if running inside a Flask request/app context
     if has_app_context():
         host = os.environ.get('DB_HOST', current_app.config.get('DB_HOST', '')).strip()
@@ -34,9 +35,12 @@ def get_db_connection():
         'cursorclass': pymysql.cursors.DictCursor
     }
 
-    # SSL configuration fix for PyMySQL when connecting to Aiven
+    # Explicit SSL Context setup for Aiven cloud database connections
     if "aivencloud" in host:
-        connection_params['ssl'] = {}
+        ssl_ctx = ssl.create_default_context()
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode = ssl.CERT_NONE
+        connection_params['ssl'] = ssl_ctx
 
     return pymysql.connect(**connection_params)
 
