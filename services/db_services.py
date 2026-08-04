@@ -204,14 +204,14 @@ def get_user_by_username(username):
             conn.close()
 
 def add_review(movie_id, user_id, rating, comment):
-    """Inserts a new review into the database, auto-creating the movie record if missing."""
+    """Inserts a new review into the database, auto-detecting column names and missing movies."""
     conn = None
     cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # 1. Auto-create movie record if it doesn't exist in Aiven yet (prevents Foreign Key crash)
+        # 1. Auto-create movie record if missing from Aiven (prevents Foreign Key errors)
         cursor.execute("SELECT id FROM movies WHERE id = %s", (int(movie_id),))
         if not cursor.fetchone():
             cursor.execute(
@@ -220,18 +220,27 @@ def add_review(movie_id, user_id, rating, comment):
             )
             conn.commit()
 
-        # 2. Inspect columns to handle schema variations
+        
         cursor.execute("SHOW COLUMNS FROM reviews")
         columns = [col['Field'] for col in cursor.fetchall()]
 
-        fields = ['movie_id', 'user_id', 'rating', 'comment']
-        values = [int(movie_id), int(user_id), int(rating), str(comment)]
+        fields = ['movie_id', 'user_id', 'rating']
+        values = [int(movie_id), int(user_id), int(rating)]
 
+        # Find the actual text column name in Aiven
+        possible_text_cols = ['comment', 'review', 'review_text', 'comments', 'content', 'text', 'body']
+        for col_name in possible_text_cols:
+            if col_name in columns:
+                fields.append(col_name)
+                values.append(str(comment))
+                break
+
+        # Check for created_at
         if 'created_at' in columns:
-            query = f"INSERT INTO reviews ({', '.join(fields)}, created_at) VALUES (%s, %s, %s, %s, NOW())"
-        else:
-            placeholders = ', '.join(['%s'] * len(fields))
-            query = f"INSERT INTO reviews ({', '.join(fields)}) VALUES ({placeholders})"
+            fields.append('created_at')
+
+        placeholders = ['NOW()' if f == 'created_at' else '%s' for f in fields]
+        query = f"INSERT INTO reviews ({', '.join(fields)}) VALUES ({', '.join(placeholders)})"
 
         cursor.execute(query, tuple(values))
         conn.commit()
