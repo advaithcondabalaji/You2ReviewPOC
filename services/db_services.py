@@ -210,15 +210,24 @@ def add_review(movie_id, user_id, rating, comment):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO reviews (movie_id, user_id, rating, comment) VALUES (%s, %s, %s, %s)",
-            (movie_id, user_id, rating, comment)
-        )
+        
+        # Explicitly pass NOW() for created_at to avoid missing default timestamp errors
+        query = """
+            INSERT INTO reviews (movie_id, user_id, rating, comment, created_at) 
+            VALUES (%s, %s, %s, %s, NOW())
+        """
+        # Strictly cast data types before insertion
+        values = (int(movie_id), int(user_id), int(rating), str(comment))
+        
+        cursor.execute(query, values)
         conn.commit()
         return True
+        
     except Exception as e:
-        print(f"Error adding review: {e}")
+        # Enhanced error logging specifically for this function
+        print(f"❌ DATABASE ERROR IN ADD_REVIEW: {e}")
         return False
+        
     finally:
         if cursor:
             cursor.close()
