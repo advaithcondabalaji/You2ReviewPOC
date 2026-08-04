@@ -1,17 +1,27 @@
 import os
 import pymysql
-from flask import current_app
+from flask import current_app, has_app_context
+from dotenv import load_dotenv
+
+# Load environment variables from .env file directly for standalone scripts
+load_dotenv()
 
 def get_db_connection():
     """Establishes a connection, applying SSL only for the cloud database."""
-    # Grab from environment variables first (Render), fallback to config (Local)
-    host = os.environ.get('DB_HOST', current_app.config.get('DB_HOST', '')).strip()
-    user = os.environ.get('DB_USER', current_app.config.get('DB_USER', '')).strip()
-    password = os.environ.get('DB_PASSWORD', current_app.config.get('DB_PASSWORD', '')).strip()
-    db = os.environ.get('DB_NAME', current_app.config.get('DB_NAME', '')).strip()
-    
-    # Safely get the port, defaulting to 3306 for local
-    port_val = os.environ.get('DB_PORT') or current_app.config.get('DB_PORT', 3306)
+    # Check if running inside a Flask request/app context
+    if has_app_context():
+        host = os.environ.get('DB_HOST', current_app.config.get('DB_HOST', '')).strip()
+        user = os.environ.get('DB_USER', current_app.config.get('DB_USER', '')).strip()
+        password = os.environ.get('DB_PASSWORD', current_app.config.get('DB_PASSWORD', '')).strip()
+        db = os.environ.get('DB_NAME', current_app.config.get('DB_NAME', '')).strip()
+        port_val = os.environ.get('DB_PORT') or current_app.config.get('DB_PORT', 3306)
+    else:
+        host = os.environ.get('DB_HOST', '').strip()
+        user = os.environ.get('DB_USER', '').strip()
+        password = os.environ.get('DB_PASSWORD', '').strip()
+        db = os.environ.get('DB_NAME', '').strip()
+        port_val = os.environ.get('DB_PORT', 3306)
+
     port = int(str(port_val).strip())
 
     # Base connection parameters
@@ -24,9 +34,9 @@ def get_db_connection():
         'cursorclass': pymysql.cursors.DictCursor
     }
 
-    # ONLY apply SSL if the host is your Aiven cloud database
+    # SSL configuration fix for PyMySQL when connecting to Aiven
     if "aivencloud" in host:
-        connection_params['ssl'] = {"ssl": {}}
+        connection_params['ssl'] = {}
 
     return pymysql.connect(**connection_params)
 
@@ -35,7 +45,6 @@ def get_all_movies(genre=None, search=None, page=1, per_page=8, **kwargs):
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
-            
             query = "SELECT * FROM movies WHERE 1=1"
             params = []
 
@@ -47,7 +56,6 @@ def get_all_movies(genre=None, search=None, page=1, per_page=8, **kwargs):
                 query += " AND (title LIKE %s OR director LIKE %s)"
                 params.extend([f"%{search}%", f"%{search}%"])
 
-            
             limit = int(per_page)
             current_page = max(1, int(page))
             offset = (current_page - 1) * limit
@@ -58,7 +66,6 @@ def get_all_movies(genre=None, search=None, page=1, per_page=8, **kwargs):
             cursor.execute(query, params)
             movies = cursor.fetchall()
 
-            
             count_query = "SELECT COUNT(*) as total FROM movies WHERE 1=1"
             count_params = []
 
@@ -134,14 +141,12 @@ def add_user(username, password_hash, email=None):
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        
         cursor.execute("SHOW COLUMNS FROM users")
         columns = [col['Field'] for col in cursor.fetchall()]
 
         fields = ['username']
         values = [username]
 
-      
         if 'password_hash' in columns:
             fields.append('password_hash')
             values.append(password_hash)
@@ -149,7 +154,6 @@ def add_user(username, password_hash, email=None):
             fields.append('password')
             values.append(password_hash)
 
-        # Handle optional/required email column
         if 'email' in columns:
             fields.append('email')
             values.append(email if email else f"{username}@example.com")
