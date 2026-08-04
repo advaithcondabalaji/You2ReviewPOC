@@ -204,27 +204,33 @@ def get_user_by_username(username):
             conn.close()
 
 def add_review(movie_id, user_id, rating, comment):
-    """Inserts a new review into the database."""
+    """Inserts a new review into the database, handling schema variations automatically."""
     conn = None
     cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Explicitly pass NOW() for created_at to avoid missing default timestamp errors
-        query = """
-            INSERT INTO reviews (movie_id, user_id, rating, comment, created_at) 
-            VALUES (%s, %s, %s, %s, NOW())
-        """
-        # Strictly cast data types before insertion
-        values = (int(movie_id), int(user_id), int(rating), str(comment))
+        # 1. Inspect actual columns in the reviews table
+        cursor.execute("SHOW COLUMNS FROM reviews")
+        columns = [col['Field'] for col in cursor.fetchall()]
         
-        cursor.execute(query, values)
+        fields = ['movie_id', 'user_id', 'rating', 'comment']
+        values = [int(movie_id), int(user_id), int(rating), str(comment)]
+        
+        # 2. Add created_at only if the column actually exists in Aiven
+        if 'created_at' in columns:
+            query = f"INSERT INTO reviews ({', '.join(fields)}, created_at) VALUES (%s, %s, %s, %s, NOW())"
+        else:
+            placeholders = ', '.join(['%s'] * len(fields))
+            query = f"INSERT INTO reviews ({', '.join(fields)}) VALUES ({placeholders})"
+            
+        cursor.execute(query, tuple(values))
         conn.commit()
+        print(f" SUCCESS: Review added for movie_id {movie_id} by user_id {user_id}")
         return True
         
     except Exception as e:
-        # Enhanced error logging specifically for this function
         print(f"❌ DATABASE ERROR IN ADD_REVIEW: {e}")
         return False
         
