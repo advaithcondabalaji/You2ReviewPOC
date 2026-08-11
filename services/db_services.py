@@ -220,7 +220,6 @@ def add_review(movie_id, user_id, rating, comment):
             )
             conn.commit()
 
-        
         cursor.execute("SHOW COLUMNS FROM reviews")
         columns = [col['Field'] for col in cursor.fetchall()]
 
@@ -259,23 +258,48 @@ def add_review(movie_id, user_id, rating, comment):
             conn.close()
 
 def get_reviews_by_movie_id(movie_id):
-    """Retrieves all reviews for a specific movie, including username and admin status."""
+    """Retrieves all reviews for a specific movie, dynamically adapting to database column names."""
     conn = None
     cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        query = """
-            SELECT reviews.*, users.username, users.is_admin 
+        
+        # 1. Inspect reviews table columns
+        cursor.execute("SHOW COLUMNS FROM reviews")
+        rev_cols = [col['Field'] for col in cursor.fetchall()]
+        
+        # 2. Inspect users table columns
+        cursor.execute("SHOW COLUMNS FROM users")
+        user_cols = [col['Field'] for col in cursor.fetchall()]
+
+        # Safely determine order column (fallback to 'id' if 'created_at' is missing)
+        order_by = "reviews.created_at" if "created_at" in rev_cols else "reviews.id"
+        
+        # Safely check for is_admin column in users
+        admin_field = ", users.is_admin" if "is_admin" in user_cols else ""
+
+        query = f"""
+            SELECT reviews.*, users.username{admin_field} 
             FROM reviews 
             JOIN users ON reviews.user_id = users.id 
             WHERE reviews.movie_id = %s 
-            ORDER BY reviews.created_at DESC
+            ORDER BY {order_by} DESC
         """
-        cursor.execute(query, (movie_id,))
-        return cursor.fetchall()
+        cursor.execute(query, (int(movie_id),))
+        reviews = cursor.fetchall()
+
+        # 3. Standardize comment field name for HTML template compatibility
+        for r in reviews:
+            if 'comment' not in r or not r['comment']:
+                for alt_key in ['review', 'review_text', 'comments', 'content', 'text', 'body']:
+                    if alt_key in r and r[alt_key]:
+                        r['comment'] = r[alt_key]
+                        break
+
+        return reviews
     except Exception as e:
-        print(f"Error fetching reviews: {e}")
+        print(f"❌ ERROR IN GET_REVIEWS_BY_MOVIE_ID: {e}")
         return []
     finally:
         if cursor:
