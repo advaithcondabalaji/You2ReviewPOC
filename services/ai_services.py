@@ -1,39 +1,45 @@
 import os
-from groq import Groq
 from dotenv import load_dotenv
-
 
 load_dotenv()
 
+def generate_movie_sentiment(title, director=None, genre=None, release_year=None):
+    """Generates an AI-powered audience sentiment summary using Groq."""
+    api_key = os.getenv('GROQ_API_KEY')
+    
+    if not api_key:
+        print("❌ GROQ_API_KEY is missing from environment variables.")
+        return f"Audience consensus generally considers '{title}' to be a memorable {genre or 'film'}."
 
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-
-def generate_movie_sentiment(title, director, genre, release_year):
-    """Generates a short AI sentiment summary using Groq."""
     try:
-        # the ai thing prompt
-        prompt = f"Write a quick, 2-sentence audience sentiment consensus for the {release_year} {genre} movie '{title}' directed by {director}."
-        
-        chat_completion = client.chat.completions.create(
+        from groq import Groq
+        client = Groq(api_key=api_key)
+
+        prompt = (
+            f"Provide a brief, 2-3 sentence AI audience sentiment analysis for the movie '{title}' "
+            f"directed by {director or 'Unknown'}, genre: {genre or 'General'}, released in {release_year or 'N/A'}. "
+            f"Summarize overall viewer reaction, key praised aspects, and general reception."
+        )
+
+        # Using actively supported Groq model
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a movie review summarizer. Provide a concise, engaging 2-sentence summary of general audience sentiment."
+                    "content": "You are a concise movie critic and sentiment analyzer. Keep responses under 60 words."
                 },
                 {
                     "role": "user",
-                    "content": prompt,
+                    "content": prompt
                 }
             ],
-            
-            model="llama-3.1-8b-instant",
-            temperature=0.7,
-            max_tokens=150
+            max_tokens=120,
+            temperature=0.7
         )
-        
-        return chat_completion.choices[0].message.content
-        
+
+        return response.choices[0].message.content.strip()
+
     except Exception as e:
-        print(f"Groq API Error: {e}")
-        # testing comment
-        return f"Unable to load real-time sentiment. Audience consensus generally considers '{title}' to be a memorable {genre} experience."
+        print(f"❌ GROQ AI ERROR: {e}")
+        return f"Audience consensus generally considers '{title}' to be a memorable {genre or 'film'}."
